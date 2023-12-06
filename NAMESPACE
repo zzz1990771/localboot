@@ -1,0 +1,3 @@
+useDynLib(localboot)
+importFrom(Rcpp, evalCpp)
+export("Rcpp.fake.fun")
