@@ -31,8 +31,8 @@ library(ggplot2)
 
 #temp source, will be deleted after the package is finished.
 source("./R/generate_network.R")
-source("./R/generate_network.R")
-source("./R/generate_network.R")
+source("./R/localboot.R")
+source("./R/plot_utils.R")
 
 # -------------------------------------------------------------------
 # Script Starts Here
