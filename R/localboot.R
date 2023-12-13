@@ -249,13 +249,13 @@ local_boot <- function(A, quantile_n = 0, B, returns = "boot", method = "own", d
   if(method == "own") {
     #get dist
     if(is.null(kowning_u)){
-      dist.matrix <- do.call(switch("zhu","zhu"="get_dist_zhu","test"= "get_dist_test"),args = list())
+      dist.matrix <- do.call(switch("zhu","zhu"="get_dist_zhu_eigen","test"= "get_dist_test"),args = list(A))
     }else{
       dist.matrix <- as.matrix(dist(kowning_u))
     }
     #get neighbors
     nb_actual <- ifelse(fast==1,min(30,(ceiling(quantile_n*N))),(ceiling(quantile_n*N))) #(ceiling(quantile_n*N)
-    neibors_matrix <- matrix(0,nrow = NROW(A),ncol = nb_actual)
+    neibors_matrix <- matrix(as.integer(0),nrow = NROW(A),ncol = nb_actual)
     
     for(i in (1:N)){
       neibor_index <- order(dist.matrix[i,], decreasing=FALSE)[1:ceiling(quantile_n*N)]
@@ -269,22 +269,9 @@ local_boot <- function(A, quantile_n = 0, B, returns = "boot", method = "own", d
     #not weighted graph
     if(weighted==FALSE){
       #estimate p for each node pair
-      p_hat_matrix <- matrix(0,nrow = NROW(A),ncol = (NROW(A)))
-      for(a in 1:(-1+NROW(p_hat_matrix))){
-        for(b in (a+1):(NROW(p_hat_matrix))){
-          ab_connection <- A[neibors_matrix[a,],neibors_matrix[b,]]
-          p_hat_matrix[a,b] <- mean(ab_connection)
-          #p_hat_matrix[a,b] <- sample(as.vector(ab_connection),1)
-        }
-      }
-      for(a in 1:(NROW(p_hat_matrix))){
-        b=a
-        ab_connection <- A[neibors_matrix[a,],neibors_matrix[b,]]
-        #p_hat_matrix[a,b] <- sum(ab_connection)/(N*N-1))
-        p_hat_matrix[a,b] <- mean(ab_connection)
-        #p_hat_matrix[a,b] <- sample(as.vector(ab_connection),1)
-      }
-      p_hat_matrix[lower.tri(p_hat_matrix)] <- t(p_hat_matrix)[lower.tri(t(p_hat_matrix))]
+      neibors_matrix = neibors_matrix - 1
+      mode(neibors_matrix) <- "integer"
+      p_hat_matrix <- calculate_p_hat_matrix(A,neibors_matrix)
     }else{
       #nb_array <- array(0,c(N,N,(ceiling(quantile_n*N)^2)))
       nb_array <- array(0,c(N,N,max_A+1))
@@ -333,27 +320,18 @@ local_boot <- function(A, quantile_n = 0, B, returns = "boot", method = "own", d
   for(i in 1:B) {
     # Sampling computation
     if(induced_sampling){
-      blist <- sample((1:N),N, replace = T)
+      blist <- sample((0:(N-1)),N, replace = T) # as Cpp starts from 0
     }else{
-      blist <- 1:N
+      blist <- 0:(N-1)
     }
     if(!is.null(user_blist)){
       blist <- user_blist
     }
     blist <- sort(blist)
     if(weighted==FALSE){
-      p_hat_matrix_b <- p_hat_matrix[blist,blist]
-      random.matrix <- matrix(runif(N*N,0,1),N,N)
-      random.matrix[lower.tri(random.matrix)] <- t(random.matrix)[lower.tri(t(random.matrix))]
-      if(no_loop == TRUE){
-        diag(random.matrix) <- 100
-      }
-      g.adj.nb <- 1*(random.matrix<p_hat_matrix_b)
-      
+      g.adj.nb <- sample_from_p_cpp(p_hat_matrix,blist,no_loop)
       rownames(g.adj.nb) <- colnames(g.adj.nb) <- paste0("v",blist)
       nb_boot.list[[i]]<- g.adj.nb 
-      
-      
     }else{
       nb_array_b <- nb_array[blist,blist,]
       random.matrix <- matrix(runif(N*N,0,1),N,N)

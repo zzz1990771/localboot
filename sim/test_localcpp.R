@@ -1,21 +1,11 @@
 # -------------------------------------------------------------------
-# Demonstration Script: Local Bootstrap on Generated Network
+# Internal Script: Test CPP accelerated localboot
 # -------------------------------------------------------------------
-# Description:
-# This script demonstrates how to apply a local bootstrap procedure
-# to a network generated with our functions. It is designed to showcase
-# methods for bootstrapping in network analysis, particularly
-# obtaining standard error estimates.
-#
-# The script will:
-# 1. Generate a network using predefined parameters.
-# 2. Implement the local bootstrap procedure on this network.
-# 3. Report the estiamted standard error on global clustering coefficient.
-#
+
 #
 # Author: Tianhai Zu
 # Affiliation: University of Texas at San Antonio
-# Created on: 12/05/2023
+# Created on: 12/13/2023
 #
 # Requirements:
 # The script requires the following R packages: 
@@ -39,7 +29,7 @@ source("./R/plot_utils.R")
 # -------------------------------------------------------------------
 
 # Number of node in a network
-n = 400
+n = 1000
 
 # Generate network adjacency matrix
 P <- graphon3(size = n)
@@ -58,13 +48,16 @@ getT <- function(adj.matrix){
 # obtain global clustering coefficient from the generated network
 getT(adj.matrix)
 
-# Use local bootstrap to estimate standard error of certain graph statistics
-local_boot_res = local_boot(adj.matrix,0.1,100,returns = "T",fast=1)
-local_boot_res$se #should be around 0.003 to 0.0036.
+# should be similar
+local_boot    (adj.matrix,0.1,200,returns = "T")$se 
+local_boot_old(adj.matrix,0.1,200,returns = "T")$se
 
-local_boot_old(adj.matrix,0.1,100,returns = "T",fast=1)$se
-
-
-system.time(local_boot(adj.matrix,0.1,100,fast=1))
-
-system.time(local_boot_old(adj.matrix,0.1,100,fast=1))
+# benchmark run time without returning graph statistics
+library(microbenchmark)
+benchmark_result <- microbenchmark(
+  function1_run = local_boot(adj.matrix,0.1,200),  
+  function2_run = local_boot_old(adj.matrix,0.1,200),  
+  times = 10
+)
+benchmark_summary <- summary(benchmark_result)
+print(benchmark_summary)
