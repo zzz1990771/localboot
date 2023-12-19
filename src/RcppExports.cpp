@@ -11,55 +11,48 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// rcppeigen_hello_world
-Eigen::MatrixXd rcppeigen_hello_world();
-RcppExport SEXP _localboot_rcppeigen_hello_world() {
+// get_dist_default_eigen
+Eigen::MatrixXd get_dist_default_eigen(Eigen::Map<Eigen::MatrixXd> A);
+RcppExport SEXP _localboot_get_dist_default_eigen(SEXP ASEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcppeigen_hello_world());
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::MatrixXd> >::type A(ASEXP);
+    rcpp_result_gen = Rcpp::wrap(get_dist_default_eigen(A));
     return rcpp_result_gen;
 END_RCPP
 }
-// rcppeigen_outerproduct
-Eigen::MatrixXd rcppeigen_outerproduct(const Eigen::VectorXd& x);
-RcppExport SEXP _localboot_rcppeigen_outerproduct(SEXP xSEXP) {
+// calculate_p_hat_matrix
+Eigen::MatrixXd calculate_p_hat_matrix(Eigen::Map<Eigen::MatrixXd> A, const Eigen::Map<Eigen::MatrixXi> neibors_matrix);
+RcppExport SEXP _localboot_calculate_p_hat_matrix(SEXP ASEXP, SEXP neibors_matrixSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcppeigen_outerproduct(x));
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::MatrixXd> >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXi> >::type neibors_matrix(neibors_matrixSEXP);
+    rcpp_result_gen = Rcpp::wrap(calculate_p_hat_matrix(A, neibors_matrix));
     return rcpp_result_gen;
 END_RCPP
 }
-// rcppeigen_innerproduct
-double rcppeigen_innerproduct(const Eigen::VectorXd& x);
-RcppExport SEXP _localboot_rcppeigen_innerproduct(SEXP xSEXP) {
+// sample_from_p_cpp
+Eigen::MatrixXd sample_from_p_cpp(Eigen::Map<Eigen::MatrixXd> p_hat_matrix, Eigen::Map<Eigen::VectorXi> blist, Eigen::Map<Eigen::MatrixXd> random_matrix, bool no_loop);
+RcppExport SEXP _localboot_sample_from_p_cpp(SEXP p_hat_matrixSEXP, SEXP blistSEXP, SEXP random_matrixSEXP, SEXP no_loopSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcppeigen_innerproduct(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rcppeigen_bothproducts
-Rcpp::List rcppeigen_bothproducts(const Eigen::VectorXd& x);
-RcppExport SEXP _localboot_rcppeigen_bothproducts(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcppeigen_bothproducts(x));
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::MatrixXd> >::type p_hat_matrix(p_hat_matrixSEXP);
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::VectorXi> >::type blist(blistSEXP);
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::MatrixXd> >::type random_matrix(random_matrixSEXP);
+    Rcpp::traits::input_parameter< bool >::type no_loop(no_loopSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_from_p_cpp(p_hat_matrix, blist, random_matrix, no_loop));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_localboot_rcppeigen_hello_world", (DL_FUNC) &_localboot_rcppeigen_hello_world, 0},
-    {"_localboot_rcppeigen_outerproduct", (DL_FUNC) &_localboot_rcppeigen_outerproduct, 1},
-    {"_localboot_rcppeigen_innerproduct", (DL_FUNC) &_localboot_rcppeigen_innerproduct, 1},
-    {"_localboot_rcppeigen_bothproducts", (DL_FUNC) &_localboot_rcppeigen_bothproducts, 1},
+    {"_localboot_get_dist_default_eigen", (DL_FUNC) &_localboot_get_dist_default_eigen, 1},
+    {"_localboot_calculate_p_hat_matrix", (DL_FUNC) &_localboot_calculate_p_hat_matrix, 2},
+    {"_localboot_sample_from_p_cpp", (DL_FUNC) &_localboot_sample_from_p_cpp, 4},
     {NULL, NULL, 0}
 };
 

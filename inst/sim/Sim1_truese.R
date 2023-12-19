@@ -7,6 +7,8 @@
 # clustering coefficient, triangle density, mean degree, and mean betweenness.
 # It covers various types of networks generated under different settings.
 #
+# This script can be used to produce in Table 1 of xxxxx. 
+#
 # The script will:
 # 1. Generate networks using predefined parameters and patterns.
 # 2. Compute graph statistics for each network.

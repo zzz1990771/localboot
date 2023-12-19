@@ -29,10 +29,10 @@ source("./R/plot_utils.R")
 # -------------------------------------------------------------------
 
 # Number of node in a network
-n = 1000
+n = 400
 
 # Generate network adjacency matrix
-P <- graphon3(size = n)
+P <- generate_graphon(size = n, graph_num = 1)
 adj.matrix <- generate_network_P(P)
 
 # Let's assume we are investigating:
@@ -49,14 +49,14 @@ getT <- function(adj.matrix){
 getT(adj.matrix)
 
 # should be similar
-local_boot    (adj.matrix,0.1,200,returns = "T")$se 
-local_boot_old(adj.matrix,0.1,200,returns = "T")$se
+localboot    (adj.matrix,0.1,200,returns = "T")$se 
+localboot_old(adj.matrix,0.1,200,returns = "T")$se
 
 # benchmark run time without returning graph statistics
 library(microbenchmark)
 benchmark_result <- microbenchmark(
-  function1_run = local_boot(adj.matrix,0.1,200),  
-  function2_run = local_boot_old(adj.matrix,0.1,200),  
+  function1_run = localboot(adj.matrix,0.1,200),  
+  function2_run = localboot_old(adj.matrix,0.1,200),  
   times = 10
 )
 benchmark_summary <- summary(benchmark_result)
