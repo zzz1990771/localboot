@@ -7,11 +7,12 @@ Authors@R: c(
     person("Tianhai", "Zu", email = "zuti@mail.uc.edu", role = c("aut", "cre")),
     person("Yichen", "Qin", email = "qinyn@ucmail.uc.edu", role = "ctb")
   )
-Description: This package provides tools for bootstrapping and visualizing network data. 
-    It provide functions to bootstrap various networks via local bootstrap procedure.
-    Additionally, it includes functions for generating probability matrices, creating 
-    network adjacency matrices from probability matrices, and plotting network 
-    structures. This package is a great tool to estimate network uncertainty.
+Description: Network analysis usually requires estimating the uncertainty of
+    a graph statistics. Through this package, we provides tools to bootstrap 
+    various networks via local bootstrap procedure. Additionally, it includes 
+    functions for generating probability matrices, creating network adjacency 
+    matrices from probability matrices, and plotting network structures. The reference 
+    will be updated soon.
 License: GPL-3
 Depends: R (>= 3.5.0)
 Imports: graphics,
