@@ -5,7 +5,7 @@ Version: 0.9.1
 Date: 2023-12-18
 Authors@R: c(
     person("Tianhai", "Zu", email = "zuti@mail.uc.edu", role = c("aut", "cre")),
-    person("Yichen", "Qin", email = "qinyn@ucmail.uc.edu", role = "ctb")
+    person("Yichen", "Qin", email = "qinyn@ucmail.uc.edu", role = c("aut","ctb"))
   )
 Description: Network analysis usually requires estimating the uncertainty of
     graph statistics. Through this package, we provide tools to bootstrap 

@@ -15,7 +15,7 @@ matrices from probability matrices, and plotting network structures.
 \author{
 \strong{Maintainer}: Tianhai Zu \email{zuti@mail.uc.edu}
 
-Other contributors:
+Authors:
 \itemize{
   \item Yichen Qin \email{qinyn@ucmail.uc.edu} [contributor]
 }
