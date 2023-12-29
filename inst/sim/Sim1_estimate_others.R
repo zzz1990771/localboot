@@ -33,78 +33,73 @@
 library(igraph)
 library(parallel)
 library(foreach)
-#library(localboot) #currently commented out
-
-# temp source, will be deleted
-source('../graph_utils.r')
-source('../graph_boot_funs.R')
+library(localboot) 
 
 # -------------------------------------------------------------------
 # Script Configuration
 # -------------------------------------------------------------------
-# Define any global variables, parameters, or method-specific settings
-# here. This section should include configurations for each of the
-# alternative methods being applied.
+
+# size of the network, number of node
+size = 200
+
+# number of simulations 
+M = 50 # use number greater than 1,000 for real simulation
+
+# number of bootstrap networks generated each time
+B = 500
+
+# define a tool function to obtain graph statistics of interest
+# for example, we start with clustering coefficient
+getT <- function(adj.matrix){
+  #for clustering coefficient 
+  (transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
+}
+
+# For other graph statistics:
+#getT <- function(adj.matrix){
+#for mean degree
+#sum(adj.matrix)/NROW(adj.matrix)
+#for clustering coefficient 
+#(transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
+#for mean betweenness
+#mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected"))
+#triangle density
+#sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/sum(count_triangles(make_full_graph(NROW(adj.matrix))))
+#}
+
+# For parallel computing, number of CPU cores
+cl_nodes = 8
+
+#specify network type
+pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
+
 
 # -------------------------------------------------------------------
 # Script Starts Here
 # -------------------------------------------------------------------
 
-#hist 
-size = 200
-M = 48
-#M_true = 2400
-B = 500
-node_sampling = TRUE
-cl_nodes = 10
+# Method: Empirical Graphon Bootstrap
 
-pattern_list <- c(7,8)
-size_list <- c(200)
-
-
-#specific function for estimate T
-getT <- function(adj.matrix){
-  #for mean degree
-  Tdegree = sum(adj.matrix)/NROW(adj.matrix)
-  
-  #for clustering coefficient 
-  Tcc = (transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
-  
-  #for mean betweenness
-  Tmb = mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
-  
-  #tg
-  T_tg = sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/(choose(NROW(adj.matrix),3)*3)
-  return(c(Tdegree,Tcc,Tmb,T_tg))
-}
-
-#tool function for parallel
-generate_graph <- function(x,size){
-  if(x<=2){
-    #graph1-2
-    W <- graphon_u_to_p_smoothness2(size=size,smoothness = c(0.01,10)[x],sampling_on_u = node_sampling)
-  }else if(x<=4){
-    #graph3-4
-    #W <- graphon_u_to_p(size=size,pattern = "SAS6",smoothness = c(1000,1.5)[x-2],sampling_on_u = node_sampling)
-    W <- graphon_u_to_p_smoothness(size=size,smoothness = c(8,2)[x-2])
-  }else if(x<=6){
-    #graph5-6
-    W <- graphon_u_to_p(size=size,pattern = "sinsin",smoothness= c(8,10)[x-4],sampling_on_u = node_sampling)
-  }else if(x == 7){
-    #read real data
-    rat_graph <- igraph::read_graph("../read_data/rattus.norvegicus_brain_3.graphml",format ="graphml")
-    rat_graph <- igraph::as.undirected(rat_graph, mode =  "each")
-    pop.adj <- as.matrix(igraph::get.adjacency(rat_graph))
-    W <- ifelse(pop.adj==2,1,pop.adj)
-  }else if(x == 8){
-    eu_email_graph <- igraph::read_graph("../read_data/email-Eu-core.txt")
-    eu_email_graph <- igraph::as.undirected(eu_email_graph, mode =  "each")
-    pop.adj <- as.matrix(igraph::get.adjacency(eu_email_graph))
-    W <- ifelse(pop.adj==2,1,pop.adj)
+#generate true se
+time_start <- Sys.time()
+TrueT_list <- mclapply(1:M, function(m) {
+  true_T <- c()
+  for(pattern in pattern_list){
+    P <- generate_graphon(size,pattern)
+    adj.matrix <- localboot::generate_network_P(P)
+    #fit local boot
+    local_boot_res = local_boot(adj.matrix,B,0, returns = "T",getT=getT)
+    Graph_T <- sd(unlist(local_boot_res))
+    true_T <- c(true_T,Graph_T)
   }
-  
-  return(W)
-}
+  return(true_T)
+}, mc.cores=cl_nodes) 
+time_end <- Sys.time()
+print(time_end-time_start)
+result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),M_true))
+apply(result_array,1,mean)
+
+# Method: Histogram Bootstrap
 
 library(blockmodels)
 #compute se
@@ -125,14 +120,9 @@ EstT_list <- mclapply(1:M, function(m) {
       W <- generate_graph(pattern,size)
       adj.matrix <- gmodel.P(W,symmetric.out = TRUE)
       
-      #blist <- sample(1:NROW(W),size,replace = TRUE)
-      #adj.matrix <- W[blist,blist]
-      
-      #library(tictoc)
-      #tic()
       my_model <- BM_bernoulli("SBM",adj.matrix,verbosity=0,plotting = "")
       my_model$estimate()
-      #toc()
+
       best_nblock = which.max(my_model$ICL)
       i_model = my_model$memberships[[best_nblock]]
       Z = i_model$Z
