@@ -19,7 +19,7 @@
 #
 # Author: Tianhai Zu
 # Affiliation: University of Texas at San Antonio
-# Created on: 12/05/2023
+# Created on: 12/28/2023
 #
 # Requirements:
 # The script requires the following R packages: 
@@ -34,107 +34,63 @@
 library(igraph)
 library(parallel)
 library(foreach)
-#library(localboot) #currently commented out
+library(localboot) 
 
-# temp source, will be deleted
-source('../graph_utils.r')
-source('../graph_boot_funs.R')
+# -------------------------------------------------------------------
+# Script Configuration
+# -------------------------------------------------------------------
+
+# size of the network, number of node
+size = 200
+
+# number of simulations 
+M_true = 10000 # use number greater than 500,000 for real simulation
+
+# sampling on node indices
+node_sampling = TRUE
+
+# define a tool function to obtain graph statistics of interest
+# for example, we start with clustering coefficient
+getT <- function(adj.matrix){
+  #for clustering coefficient 
+  (transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
+}
+
+# For other graph statistics:
+#getT <- function(adj.matrix){
+  #for mean degree
+  #sum(adj.matrix)/NROW(adj.matrix)
+  #for clustering coefficient 
+  #(transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
+  #for mean betweenness
+  #mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected"))
+  #triangle density
+  #sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/sum(count_triangles(make_full_graph(NROW(adj.matrix))))
+#}
+
+# For parallel computing, number of CPU cores
+cl_nodes = 8
 
 # -------------------------------------------------------------------
 # Script Starts Here
 # -------------------------------------------------------------------
 
-
-library(parallel)
-library(foreach)
-library(igraph)
-#library(viridis)
-source('../graph_utils.r')
-source('../graph_boot_funs.R')
-#Sys.sleep(3600*5)
-size = 200
-#M = 100
-M_true = 100000
-B = 500
-node_sampling = TRUE
-cl_nodes = 12
-#run for sim real data for now
-pattern_list <- c(7,8)#c(1,2,3,4,5,6)
-size_list <- c(200)
-
-
-#specific function for estimate T
-getT <- function(adj.matrix){
-  #for mean degree
-  #sum(adj.matrix)/NROW(adj.matrix)
-  
-  #for clustering coefficient 
-  #(transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
-  
-  #for mean betweenness
-  #mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
-  
-  #tg
-  #sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/sum(count_triangles(make_full_graph(NROW(adj.matrix))))
-  
-  #all four
-  c(sum(adj.matrix)/NROW(adj.matrix),
-    (transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected"))),
-    mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected"))),
-    sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/sum(count_triangles(make_full_graph(NROW(adj.matrix))))
-  )
-}
-
-#tool function for parallel
-generate_graph <- function(x,size){
-  if(x<=2){
-    #graph1-2
-    W <- graphon_u_to_p_smoothness2(size=size,smoothness = c(0.01,10)[x],sampling_on_u = node_sampling)
-  }else if(x<=4){
-    #graph3-4
-    #W <- graphon_u_to_p(size=size,pattern = "SAS6",smoothness = c(1000,1.5)[x-2],sampling_on_u = node_sampling)
-    W <- graphon_u_to_p_smoothness(size=size,smoothness = c(8,2)[x-2])
-  }else if(x<=6){
-    #graph5-6
-    W <- graphon_u_to_p(size=size,pattern = "sinsin",smoothness= c(8,10)[x-4],sampling_on_u = node_sampling)
-  }else if(x == 7){
-    #read real data
-    rat_graph <- igraph::read_graph("../read_data/rattus.norvegicus_brain_3.graphml",format ="graphml")
-    rat_graph <- igraph::as.undirected(rat_graph, mode =  "each")
-    pop.adj <- as.matrix(igraph::get.adjacency(rat_graph))
-    W <- ifelse(pop.adj==2,1,pop.adj)
-  }else if(x == 8){
-    eu_email_graph <- igraph::read_graph("../read_data/email-Eu-core.txt")
-    eu_email_graph <- igraph::as.undirected(eu_email_graph, mode =  "each")
-    pop.adj <- as.matrix(igraph::get.adjacency(eu_email_graph))
-    W <- ifelse(pop.adj==2,1,pop.adj)
-  }
-  return(W)
-}
-
+#specify network type
+pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
 
 #generate true se
 time_start <- Sys.time()
 TrueT_list <- mclapply(1:M_true, function(m) {
-  true_T <- matrix(NA,0,4) 
+  true_T <- c()
   for(pattern in pattern_list){
-    #for(size in size_list){
-    W <- generate_graph(pattern,size)
-    
-    if(pattern %in% c(7,8)){
-      blist <- sample(1:NROW(W),size,replace = TRUE)
-      adj.matrix <- W[blist,blist]
-    }else{
-      adj.matrix <- gmodel.P(W,symmetric.out = TRUE)
-    }
-    
-    T <- getT(adj.matrix)
-    true_T <- rbind(true_T,T)
-    #}
+    P <- generate_graphon(size,pattern)
+    adj.matrix <- localboot::generate_network_P(P)
+    Graph_T <- getT(adj.matrix)
+    true_T <- c(true_T,Graph_T)
   }
   return(true_T)
 }, mc.cores=cl_nodes) 
 time_end <- Sys.time()
 print(time_end-time_start)
-result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),4,M_true))
-apply(result_array,c(1,2),sd)
+result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),M_true))
+apply(result_array,1,sd)

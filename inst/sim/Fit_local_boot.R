@@ -26,13 +26,8 @@
 
 # Library Imports
 library(igraph)
-#library(localboot) #currently commented out
+library(localboot)
 library(ggplot2)
-
-#temp source, will be deleted after the package is finished.
-source("./R/generate_network.R")
-source("./R/localboot.R")
-source("./R/plot_utils.R")
 
 # -------------------------------------------------------------------
 # Script Starts Here
@@ -42,7 +37,7 @@ source("./R/plot_utils.R")
 n = 400
 
 # Generate network adjacency matrix
-P <- graphon3(size = n)
+P <- generate_graphon(n,3) 
 adj.matrix <- generate_network_P(P)
 
 # Let's assume we are investigating:
@@ -59,12 +54,5 @@ getT <- function(adj.matrix){
 getT(adj.matrix)
 
 # Use local bootstrap to estimate standard error of certain graph statistics
-local_boot_res = local_boot(adj.matrix,0.1,100,returns = "T",fast=1)
+local_boot_res = localboot(adj.matrix,100,returns = "T",getT=getT)
 local_boot_res$se #should be around 0.003 to 0.0036.
-
-local_boot_old(adj.matrix,0.1,100,returns = "T",fast=1)$se
-
-
-system.time(local_boot(adj.matrix,0.1,100,fast=1))
-
-system.time(local_boot_old(adj.matrix,0.1,100,fast=1))

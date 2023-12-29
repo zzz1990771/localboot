@@ -40,39 +40,68 @@
 library(igraph)
 library(parallel)
 library(foreach)
-#library(localboot) #currently commented out
-
-# temp source, will be deleted
-source('./R/')
-source('../graph_boot_funs.R')
+library(localboot) 
 
 # -------------------------------------------------------------------
 # Script Configuration
 # -------------------------------------------------------------------
 
-# Number of node in a network
-n = 400
+# size of the network, number of node
+size = 200
 
-# Specify network type
-graphon_no = 1
+# number of simulations 
+M = 50 # use number greater than 1,000 for real simulation
 
-# Let's assume we are investigating:
-# **global clustering coefficient**
-# We define a tool function to specify the target graph statistics 
+# number of bootstrap networks generated each time
+B = 500
+
+# sampling on node indices
+node_sampling = TRUE
+
+# define a tool function to obtain graph statistics of interest
+# for example, we start with clustering coefficient
 getT <- function(adj.matrix){
-  library(igraph)
-  #clustering coefficient 
-  return( transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")) )
+  #for clustering coefficient 
+  (transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
 }
+
+# For other graph statistics:
+#getT <- function(adj.matrix){
+#for mean degree
+#sum(adj.matrix)/NROW(adj.matrix)
+#for clustering coefficient 
+#(transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
+#for mean betweenness
+#mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected"))
+#triangle density
+#sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/sum(count_triangles(make_full_graph(NROW(adj.matrix))))
+#}
+
+# For parallel computing, number of CPU cores
+cl_nodes = 8
 
 # -------------------------------------------------------------------
 # Script Starts Here
 # -------------------------------------------------------------------
 
+#specify network type
+pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
 
-# Generate network adjacency matrix
-P <- generate_graphon(n,graphon_no)
-adj.matrix <- generate_network_P(P)
-
-
-
+#generate true se
+time_start <- Sys.time()
+TrueT_list <- mclapply(1:M, function(m) {
+  true_T <- c()
+  for(pattern in pattern_list){
+    P <- generate_graphon(size,pattern)
+    adj.matrix <- localboot::generate_network_P(P)
+    #fit local boot
+    local_boot_res = local_boot(adj.matrix,B,returns = "T",getT=getT)
+    Graph_T <- sd(unlist(local_boot_res))
+    true_T <- c(true_T,Graph_T)
+  }
+  return(true_T)
+}, mc.cores=cl_nodes) 
+time_end <- Sys.time()
+print(time_end-time_start)
+result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),M_true))
+apply(result_array,1,mean)
