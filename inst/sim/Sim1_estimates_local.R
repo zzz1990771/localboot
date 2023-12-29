@@ -55,9 +55,6 @@ M = 50 # use number greater than 1,000 for real simulation
 # number of bootstrap networks generated each time
 B = 500
 
-# sampling on node indices
-node_sampling = TRUE
-
 # define a tool function to obtain graph statistics of interest
 # for example, we start with clustering coefficient
 getT <- function(adj.matrix){
