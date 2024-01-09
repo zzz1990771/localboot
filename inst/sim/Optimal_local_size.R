@@ -21,12 +21,12 @@
 #
 # Author: Tianhai Zu
 # Affiliation: University of Texas at San Antonio
-# Created on: 12/05/2023
+# Created on: 01/08/2024
 #
 # Requirements:
 # The script requires the following R packages:
 # - igraph (for basic network generation and manipulation)
-# - [Any other packages needed for specific models or patterns]
+# - localboot (this package)
 # Install these packages using install.packages() if not already installed.
 
 # Library Imports

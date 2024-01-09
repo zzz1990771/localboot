@@ -2,7 +2,7 @@ Package: localboot
 Type: Package
 Title: Local Bootstrap Methods for Various Networks
 Version: 0.9.2
-Date: 2023-12-18
+Date: 2024-01-08
 Authors@R: c(
     person("Tianhai", "Zu", email = "zuti@mail.uc.edu", role = c("aut", "cre")),
     person("Yichen", "Qin", email = "qinyn@ucmail.uc.edu", role = c("aut","ctb"))

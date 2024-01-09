@@ -3,6 +3,7 @@
 ## New Features
 - Added new simulation scenarios.
 - Expanded `generate_graphon()` with more network types.
+- Added simulation scripts in `inst` folder.
 
 ## Improvements
 - Updated documentation with examples for new features.

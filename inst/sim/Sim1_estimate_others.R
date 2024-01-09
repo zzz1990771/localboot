@@ -9,12 +9,13 @@
 # Methods Implemented:
 # A. Empirical Graphon Bootstrap - Applies bootstrap techniques based on empirical graphon estimates.
 # B. Subsampling Method - Utilizes subsampling for network analysis to handle large-scale networks.
-# C. Embedding Method - Employs embedding techniques for dimensional reduction and network visualization.
-# D. Neighborhood-Sampling Method - Focuses on sampling methods within neighborhood structures of networks.
-# E. Proposed Method with Edge Sampling - A novel method emphasizing edge sampling in network analysis.
-# F. Proposed Method with Random Neighbors - Introduces a new approach using random neighbor selection.
+# C. Embedding Method - Employs embedding to bootstrap networks.
 # G. Histogram Bootstrap - Implements a histogram-based bootstrap approach for network data.
-#
+# 
+# Methods not provided here as they do not really work:
+# D. Neighborhood-Sampling Method
+# E. Proposed Method with Edge Sampling
+# F. Proposed Method with Random Neighbors
 #
 # Author: Tianhai Zu
 # Affiliation: University of Texas at San Antonio
@@ -25,6 +26,8 @@
 # - igraph (for network generation and analysis)
 # - parallel, foreach (for parallel computation)
 # - localboot (this package)
+# - blockmodels (package for histogram method)
+# - RSpectra (package for subsampling method)
 # Install these packages using install.packages() if not already installed.
 # Additional files, like real-world network data, should be in the
 # specified directory.
@@ -34,6 +37,11 @@ library(igraph)
 library(parallel)
 library(foreach)
 library(localboot) 
+
+#for other methods in this simulation script, we need to load
+source(system.file("sim", "sup_funcs_sim.R", package = "localboot"))
+library(blockmodels)
+library(RSpectra)
 
 # -------------------------------------------------------------------
 # Script Configuration
@@ -72,158 +80,111 @@ cl_nodes = 8
 
 #specify network type
 pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
-
+pattern_list <- c(1,2) # c(7,8) for real data
 
 # -------------------------------------------------------------------
 # Script Starts Here
 # -------------------------------------------------------------------
 
-# Method: Empirical Graphon Bootstrap
+# Method A: Empirical Graphon Bootstrap (EGB)
+# As this method is a special case of local bootstrap, we use 
+# function `localboot` with size of neighbors being 0 to achieve EGB.
 
-#generate true se
+# obtain estimated standard errors via EGB
 time_start <- Sys.time()
-TrueT_list <- mclapply(1:M, function(m) {
-  true_T <- c()
+EGB_list <- mclapply(1:M, function(m) {
+  est_T <- c()
   for(pattern in pattern_list){
     P <- generate_graphon(size,pattern)
     adj.matrix <- localboot::generate_network_P(P)
     #fit local boot
-    local_boot_res = local_boot(adj.matrix,B,0, returns = "T",getT=getT)
+    local_boot_res = localboot(adj.matrix,B,0, returns = "T",getT=getT)
     Graph_T <- sd(unlist(local_boot_res))
-    true_T <- c(true_T,Graph_T)
+    est_T <- c(est_T,Graph_T)
   }
-  return(true_T)
+  return(est_T)
 }, mc.cores=cl_nodes) 
 time_end <- Sys.time()
 print(time_end-time_start)
-result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),M_true))
+result_array = array(unlist(EGB_list),dim=c(length(pattern_list),M))
+apply(result_array,1,mean)
+
+# Method B: subsampling 
+
+# obtain estimated standard errors via subsampling
+time_start <- Sys.time()
+sub_list <- mclapply(1:M, function(m) {
+  est_T <- c()
+  for(pattern in pattern_list){
+    P <- generate_graphon(size,pattern)
+    adj.matrix <- localboot::generate_network_P(P)
+    #fit subsampling boot
+    ls.boot.num <- vertex_subsampling(adj.matrix,b=0.2*size,N=size,my_function=getT,output_size = 1)
+    ls.se <- sqrt(subsampling_var.numeric(numeric=ls.boot.num,n =size,b=0.2*size))
+    Graph_T <- ls.se
+    est_T <- c(est_T,Graph_T)
+  }
+  return(est_T)
+}, mc.cores=cl_nodes)
+time_end <- Sys.time()
+print(time_end-time_start)
+result_array = array(unlist(sub_list),dim=c(length(pattern_list),M))
+apply(result_array,1,mean)
+
+
+
+# Method C: Embedding
+# obtain estimated standard errors via Embedding
+time_start <- Sys.time()
+EstT_list <- mclapply(1:M, function(m) {
+  est_T <- c()
+  for(pattern in pattern_list){
+    P <- generate_graphon(size,pattern)
+    adj.matrix <- localboot::generate_network_P(P)
+    #fit Embedding boot
+    local_boot_res = ll_boot(adj.matrix,B,d=5)
+    Graph_T <- sd(unlist(lapply(local_boot_res,getT)))
+    est_T <- c(est_T,Graph_T)
+  }
+  return(est_T)
+}, mc.cores=cl_nodes) 
+time_end <- Sys.time()
+print(time_end-time_start)
+result_array = array(unlist(EstT_list),dim=c(length(pattern_list),M))
 apply(result_array,1,mean)
 
 # Method: Histogram Bootstrap
 
-library(blockmodels)
-#compute se
+# obtain estimated standard errors via Histogram Bootstrap
 time_start <- Sys.time()
 EstT_list <- mclapply(1:M, function(m) {
-  library(tictoc)
-  tic()
-  se_est_array <- array(NA,c(length(pattern_list),length(size_list),4))
+  est_T <- c()
   for(pattern in pattern_list){
-    for(size in size_list){
-      if(pattern == 3){
-        best_nb = c(0.4,0.1,0.1,0.1)[which(size_list==size)]
-      }else{
-        best_nb = c(0.1,0.1,0.1,0.1)[which(size_list==size)]
-      }
-      
-      
-      W <- generate_graph(pattern,size)
-      adj.matrix <- gmodel.P(W,symmetric.out = TRUE)
-      
-      my_model <- BM_bernoulli("SBM",adj.matrix,verbosity=0,plotting = "")
-      my_model$estimate()
-
-      best_nblock = which.max(my_model$ICL)
-      i_model = my_model$memberships[[best_nblock]]
-      Z = i_model$Z
-      memberships = apply(Z,1,which.max)
-      p = my_model$model_parameters[[best_nblock]]$pi
-      est_p = p[memberships,memberships]
-      Tresult = matrix(NA,B,4)
-      for(b in 1:B){
-        boot_adj = P_nb_boot(est_p,1)[[1]]
-        Tresult[b,] = getT(boot_adj)
-      }
-      Tresult <- apply(Tresult,2,sd)
-      se_est_array[which(pattern_list==pattern),which(size_list==size),] <- Tresult
+    P <- generate_graphon(size,pattern)
+    adj.matrix <- localboot::generate_network_P(P)
+    #step1: get Histogram est_p
+    my_model <- BM_bernoulli("SBM",adj.matrix,verbosity=0,plotting = "")
+    my_model$estimate()
+    best_nblock = which.max(my_model$ICL)
+    i_model = my_model$memberships[[best_nblock]]
+    Z = i_model$Z
+    memberships = apply(Z,1,which.max)
+    p = my_model$model_parameters[[best_nblock]]$pi
+    est_p = p[memberships,memberships]
+    #step2: generate Histogram bootstrap networks
+    boot_networks = NULL
+    for(b in 1:B){
+      resample_index = sample(1:size,size,replace = T)
+      resampled_est_p = est_p[resample_index,resample_index]
+      boot_networks[[b]] = generate_network_P(resampled_est_p)
     }
+    Graph_T <- sd(unlist(lapply(boot_networks,getT)))
+    est_T <- c(est_T,Graph_T)
   }
-  toc()
-  return(se_est_array)
+  return(est_T)
 }, mc.cores=cl_nodes) 
 time_end <- Sys.time()
 print(time_end-time_start)
-
-result_array_boot_all = array(NA,c(length(pattern_list),length(size_list),4,M))
-m=1
-for(i in (1:length(EstT_list))){
-  result_array_boot_all[,,,m] = EstT_list[[i]]
-  m=m+1
-}
-saveRDS(result_array_boot_all,"results_hist_d1graph_d2_size_d3type_d4sim_realdatasim.RDS")
-true_stats_boot = apply(result_array_boot_all,c(1,2,3),mean)
-true_stats_boot
-
-size = 800
-M = 20
-#M_true = 2400
-B = 500
-node_sampling = TRUE
-cl_nodes = 10
-
-pattern_list <- c(3,5)
-size_list <- c(200,400,800,2000)
-
-
-#specific function for estimate T
-getT <- function(adj.matrix){
-  #for mean degree
-  #sum(adj.matrix)/NROW(adj.matrix)
-  
-  #for clustering coefficient 
-  #(transitivity(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
-  
-  #for mean betweenness
-  #mean(betweenness(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))
-  
-  #tg
-  sum(count_triangles(graph_from_adjacency_matrix(adj.matrix,mode = "undirected")))/(choose(NROW(adj.matrix),3)*3)
-  
-}
-
-#tool function for parallel
-generate_graph <- function(x,size){
-  if(x<=2){
-    #graph1-2
-    W <- graphon_u_to_p_smoothness2(size=size,smoothness = c(0.01,10)[x],sampling_on_u = node_sampling)
-  }else if(x<=4){
-    #graph3-4
-    #W <- graphon_u_to_p(size=size,pattern = "SAS6",smoothness = c(1000,1.5)[x-2],sampling_on_u = node_sampling)
-    W <- graphon_u_to_p_smoothness(size=size,smoothness = c(8,2)[x-2])
-  }else if(x<=6){
-    #graph5-6
-    W <- graphon_u_to_p(size=size,pattern = "sinsin",smoothness= c(8,10)[x-4],sampling_on_u = node_sampling)
-  }
-  return(W)
-}
-
-
-#generate true se
-time_start <- Sys.time()
-TrueT_list <- mclapply(1:M, function(m) {
-  se_est_v <- c() 
-  for(pattern in pattern_list){
-    for(size in size_list){
-      W <- generate_graph(pattern,size)
-      adj.matrix <- gmodel.P(W,symmetric.out = TRUE)
-      library(tictoc)
-      #tic()
-      boot.Tlist <- zhu_nb_boot(adj.matrix,0.1,B,kowning_u=NULL,method="own",
-                                induced_sampling = TRUE,weighted=FALSE,fast=1,getT = getT)
-#toc()
-
-se_est <- sd(unlist(boot.Tlist))
-
-T <- getT(adj.matrix)
-se_est_v <- c(se_est_v,se_est)
-  }
-}
-  return(se_est_v)
-  }, mc.cores=cl_nodes) 
-time_end <- Sys.time()
-print(time_end-time_start)
-apply(do.call("cbind",TrueT_list),1,mean)
-
-
-
+result_array = array(unlist(EstT_list),dim=c(length(pattern_list),M))
+apply(result_array,1,mean)
 
