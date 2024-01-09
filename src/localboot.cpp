@@ -13,7 +13,7 @@
 // [[Rcpp::export]]
 Eigen::MatrixXd get_dist_default_eigen(Eigen::Map<Eigen::MatrixXd> A) {
   int N = A.rows();
-  Eigen::MatrixXd dist_matrix(N, N);
+  Eigen::MatrixXd dist_matrix = Eigen::MatrixXd::Zero(N, N);
   Eigen::MatrixXd A_sq = (A * A) / N;
   
   for (int i = 0; i < N - 1; i++) {
@@ -72,7 +72,7 @@ Eigen::MatrixXd sample_from_p_cpp(Eigen::Map<Eigen::MatrixXd> p_hat_matrix,
                               Eigen::Map<Eigen::MatrixXd> random_matrix, bool no_loop) {
   int N = p_hat_matrix.rows();
   
-  Eigen::MatrixXd p_hat_matrix_b(N, N);
+  Eigen::MatrixXd p_hat_matrix_b = Eigen::MatrixXd::Zero(N, N);
   
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < N; j++) {
@@ -80,7 +80,7 @@ Eigen::MatrixXd sample_from_p_cpp(Eigen::Map<Eigen::MatrixXd> p_hat_matrix,
     }
   }
   
-  Eigen::MatrixXd g_adj_nb(N, N);
+  Eigen::MatrixXd g_adj_nb = Eigen::MatrixXd::Zero(N, N);
   
   for (int i = 0; i < N; i++) {
     for (int j = i + 1; j < N; j++) {
