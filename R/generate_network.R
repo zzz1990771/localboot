@@ -1,4 +1,4 @@
-# Define the formula to generate p matrix of graphon1
+# Define the formula to generate p matrix of graphon3 (old graphon1)
 graphon3 <- function(u, size){
   p_matrix = matrix(0,nrow=size,ncol=size)
   for(i in 1:size){
@@ -10,7 +10,7 @@ graphon3 <- function(u, size){
   p_matrix
 }
 
-# Define the formula to generate p matrix of graphon2
+# Define the formula to generate p matrix of graphon6 (old graphon2)
 graphon6 <- function(u, size){
   p_matrix = matrix(0,nrow=size,ncol=size)
   for(i in 1:size){
@@ -22,7 +22,7 @@ graphon6 <- function(u, size){
   p_matrix
 }
 
-# Define the formula to generate p matrix of graphon3
+# Define the formula to generate p matrix of graphon1 (old graphon3)
 graphon1 <- function(u, size){
   p_matrix = matrix(0,nrow=size,ncol=size)
   for(i in 1:size){
@@ -45,7 +45,7 @@ graphon4 <- function(u, size){
   p_matrix
 }
 
-# Define the formula to generate p matrix of graphon5
+# Define the formula to generate p matrix of graphon2 (old graphon5)
 graphon2 <- function(u, size){
   p_matrix = matrix(0,nrow=size,ncol=size)
   s = 8

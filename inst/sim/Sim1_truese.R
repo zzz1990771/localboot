@@ -77,6 +77,7 @@ cl_nodes = 8
 
 #specify network type
 pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
+pattern_list <- c(1,2)
 
 #generate true se
 time_start <- Sys.time()

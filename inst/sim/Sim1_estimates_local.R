@@ -75,7 +75,7 @@ getT <- function(adj.matrix){
 #}
 
 # For parallel computing, number of CPU cores
-cl_nodes = 8
+cl_nodes = 18
 
 # -------------------------------------------------------------------
 # Script Starts Here
@@ -83,6 +83,7 @@ cl_nodes = 8
 
 #specify network type
 pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
+pattern_list <- c(1,2) # c(7,8) for real data
 
 #generate true se
 time_start <- Sys.time()
@@ -90,15 +91,15 @@ TrueT_list <- mclapply(1:M, function(m) {
   true_T <- c()
   for(pattern in pattern_list){
     P <- generate_graphon(size,pattern)
-    adj.matrix <- localboot::generate_network_P(P)
+    adj.matrix <- generate_network_P(P)
     #fit local boot
-    local_boot_res = local_boot(adj.matrix,B,returns = "T",getT=getT)
-    Graph_T <- sd(unlist(local_boot_res))
+    local_boot_res = localboot(adj.matrix,B,returns = "T",getT=getT)
+    Graph_T <- local_boot_res$se
     true_T <- c(true_T,Graph_T)
   }
   return(true_T)
 }, mc.cores=cl_nodes) 
 time_end <- Sys.time()
 print(time_end-time_start)
-result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),M_true))
+result_array = array(unlist(TrueT_list),dim=c(length(pattern_list),M))
 apply(result_array,1,mean)

@@ -48,10 +48,10 @@ library(RSpectra)
 # -------------------------------------------------------------------
 
 # size of the network, number of node
-size = 200
+size = 800
 
 # number of simulations 
-M = 50 # use number greater than 1,000 for real simulation
+M = 18*3 # use number greater than 1,000 for real simulation
 
 # number of bootstrap networks generated each time
 B = 500
@@ -76,7 +76,7 @@ getT <- function(adj.matrix){
 #}
 
 # For parallel computing, number of CPU cores
-cl_nodes = 8
+cl_nodes = 18
 
 #specify network type
 pattern_list <- c(1,2,3,4,5,6) # c(7,8) for real data
@@ -97,9 +97,9 @@ EGB_list <- mclapply(1:M, function(m) {
   for(pattern in pattern_list){
     P <- generate_graphon(size,pattern)
     adj.matrix <- localboot::generate_network_P(P)
-    #fit local boot
-    local_boot_res = localboot(adj.matrix,B,0, returns = "T",getT=getT)
-    Graph_T <- sd(unlist(local_boot_res))
+    #fit EGB via localboot
+    EGB_boot_res = localboot(adj.matrix,B,quantile_n = 1/size, returns = "T",getT=getT)
+    Graph_T <- EGB_boot_res$se
     est_T <- c(est_T,Graph_T)
   }
   return(est_T)
@@ -107,9 +107,39 @@ EGB_list <- mclapply(1:M, function(m) {
 time_end <- Sys.time()
 print(time_end-time_start)
 result_array = array(unlist(EGB_list),dim=c(length(pattern_list),M))
-apply(result_array,1,mean)
+
+#print out
+print("Method A: Empirical Graphon Bootstrap (EGB)")
+print("Estimated SE for various networks:")
+print(apply(result_array,1,mean))
 
 # Method B: subsampling 
+
+for(sample_size in seq(0.95,0.99,0.01)){
+  # obtain estimated standard errors via subsampling
+  time_start <- Sys.time()
+  sub_list <- mclapply(1:M, function(m) {
+    est_T <- c()
+    for(pattern in pattern_list){
+      P <- generate_graphon(size,pattern)
+      adj.matrix <- localboot::generate_network_P(P)
+      #fit subsampling boot
+      ls.boot.num <- vertex_subsampling(adj.matrix,b=sample_size*size,N=B,my_function=getT,output_size = 1)
+      ls.se <- sqrt(subsampling_var.numeric(numeric=ls.boot.num,n =size,b=sample_size*size))
+      Graph_T <- ls.se
+      est_T <- c(est_T,Graph_T)
+    }
+    return(est_T)
+  }, mc.cores=cl_nodes)
+  time_end <- Sys.time()
+  print(time_end-time_start)
+  result_array = array(unlist(sub_list),dim=c(length(pattern_list),M))
+  #print out
+  print("Method B: subsampling")
+  print("Estimated SE for various networks:")
+  print(sample_size)
+  print(apply(result_array,1,mean))
+}
 
 # obtain estimated standard errors via subsampling
 time_start <- Sys.time()
@@ -119,8 +149,8 @@ sub_list <- mclapply(1:M, function(m) {
     P <- generate_graphon(size,pattern)
     adj.matrix <- localboot::generate_network_P(P)
     #fit subsampling boot
-    ls.boot.num <- vertex_subsampling(adj.matrix,b=0.2*size,N=size,my_function=getT,output_size = 1)
-    ls.se <- sqrt(subsampling_var.numeric(numeric=ls.boot.num,n =size,b=0.2*size))
+    ls.boot.num <- vertex_subsampling(adj.matrix,b=0.1*size,N=500,my_function=getT,output_size = 1)
+    ls.se <- sqrt(subsampling_var.numeric(numeric=ls.boot.num,n=size,b=0.1*size))
     Graph_T <- ls.se
     est_T <- c(est_T,Graph_T)
   }
@@ -129,6 +159,9 @@ sub_list <- mclapply(1:M, function(m) {
 time_end <- Sys.time()
 print(time_end-time_start)
 result_array = array(unlist(sub_list),dim=c(length(pattern_list),M))
+#print out
+print("Method B: subsampling")
+print("Estimated SE for various networks:")
 apply(result_array,1,mean)
 
 
@@ -151,6 +184,10 @@ EstT_list <- mclapply(1:M, function(m) {
 time_end <- Sys.time()
 print(time_end-time_start)
 result_array = array(unlist(EstT_list),dim=c(length(pattern_list),M))
+
+#print out
+print("Method C: Embedding")
+print("Estimated SE for various networks:")
 apply(result_array,1,mean)
 
 # Method: Histogram Bootstrap
@@ -186,5 +223,10 @@ EstT_list <- mclapply(1:M, function(m) {
 time_end <- Sys.time()
 print(time_end-time_start)
 result_array = array(unlist(EstT_list),dim=c(length(pattern_list),M))
+
+#print out
+print("Method G: Histogram Bootstrap")
+print("Estimated SE for various networks:")
 apply(result_array,1,mean)
+
 
